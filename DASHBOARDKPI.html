@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de KPIs - CSI & Handling</title>
+    <!-- Incluindo o Tailwind CSS para estilização -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Incluindo a biblioteca Chart.js para os gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Incluindo a biblioteca Lucide Icons para os ícones -->
+    <script src="https://unpkg.com/lucide-react@0.292.0/dist/lucide-react.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+        }
+        /* Estilos para a barra de rolagem */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        /* Estilos para o modal */
+        .modal {
+            transition: opacity 0.25s ease;
+        }
+        .modal-active {
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        /* Classes de animação para o modal */
+        .modal-enter {
+            opacity: 0;
+        }
+        .modal-enter-active {
+            opacity: 1;
+        }
+        .modal-leave-active {
+            opacity: 0;
+        }
+    </style>
+</head>
+<body class="flex h-screen">
+
+    <!-- Sidebar para filtros -->
+    <aside class="w-64 bg-white p-6 shadow-lg overflow-y-auto">
+        <div class="flex items-center space-x-3 mb-8">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-600"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20V16"/></svg>
+            <h1 class="text-xl font-bold text-gray-800">Dashboard KPIs</h1>
+        </div>
+        <nav>
+            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Filtros por Área</h2>
+            <div id="filters" class="space-y-2">
+                <!-- Filtros serão inseridos aqui pelo JavaScript -->
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Conteúdo Principal -->
+    <main class="flex-1 p-6 lg:p-10 overflow-y-auto">
+        <div class="container mx-auto">
+            <!-- Cabeçalho -->
+            <header class="mb-8">
+                <h1 class="text-3xl font-bold text-gray-800">Painel de Indicadores CSI & Handling 2025</h1>
+                <p class="text-gray-500 mt-1">Análise de performance mensal dos indicadores chave.</p>
+            </header>
+
+            <!-- Seção de Resumo -->
+            <section id="summary" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+                <!-- Cards de resumo serão inseridos aqui -->
+            </section>
+
+            <!-- Seção de Gráficos -->
+            <section class="mb-8 bg-white p-6 rounded-lg shadow">
+                 <h2 class="text-xl font-semibold text-gray-700 mb-4">Performance por Área</h2>
+                 <p class="text-gray-500 mb-4">Contagem de indicadores que atingiram a meta versus os que não atingiram, por área.</p>
+                <div class="h-96">
+                    <canvas id="areaPerformanceChart"></canvas>
+                </div>
+            </section>
+            
+            <!-- Tabela de Detalhes dos KPIs -->
+            <section class="bg-white p-6 rounded-lg shadow">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-gray-700">Detalhes dos Indicadores</h2>
+                    <input type="text" id="searchInput" placeholder="Buscar indicador..." class="mt-4 md:mt-0 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-gray-500">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3">Área</th>
+                                <th scope="col" class="px-6 py-3">Indicador</th>
+                                <th scope="col" class="px-6 py-3 text-center">Peso</th>
+                                <th scope="col" class="px-6 py-3 text-center">YTD</th>
+                                <th scope="col" class="px-6 py-3 text-center">Jan</th>
+                                <th scope="col" class="px-6 py-3 text-center">Fev</th>
+                                <th scope="col" class="px-6 py-3 text-center">Mar</th>
+                                <th scope="col" class="px-6 py-3 text-center">Abr</th>
+                                <th scope="col" class="px-6 py-3 text-center">Mai</th>
+                                <th scope="col" class="px-6 py-3 text-center">Jun</th>
+                                <th scope="col" class="px-6 py-3 text-center">Jul</th>
+                                <th scope="col" class="px-6 py-3 text-center">Ago</th>
+                                <th scope="col" class="px-6 py-3 text-center">Set</th>
+                            </tr>
+                        </thead>
+                        <tbody id="kpiTableBody">
+                            <!-- Linhas da tabela serão inseridas aqui -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Modal para Gráfico de Tendência -->
+    <div id="kpiModal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <div class="flex justify-between items-center pb-3">
+                    <h3 id="modalTitle" class="text-lg leading-6 font-medium text-gray-900"></h3>
+                    <button id="closeModal" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <div class="mt-2 px-7 py-3">
+                    <div class="h-96">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- DADOS PROCESSADOS ---
+        // Os dados dos arquivos CSV foram analisados, limpos e estruturados neste formato JSON para facilitar a manipulação.
+        const kpiData = [
+            { "area": "Inventário", "indicador": "Ajuste Net R$", "peso": 5, "ytd": "-R$ 5.922", "isLowerBetter": true, "results": ["-R$ 1.313", "-R$ 3.296", "-R$ 1.313", "R$ 1.050", "-R$ 1.050", "R$ 0", "-R$ 2.656", "R$ 2.656", "R$ 0"], "goals": ["-R$ 1.483,40", "-R$ 1.223,50", "-R$ 1.720,30", "-R$ 1.421,40", "-R$ 1.476,80", "-R$ 1.380,40", "-R$ 1.531,80", "-R$ 1.597,00", "-R$ 1.397,20"] },
+            { "area": "Inventário", "indicador": "Ajuste Gross R$", "peso": 3, "ytd": "R$ 575.474", "isLowerBetter": true, "results": ["R$ 67.282", "R$ 101.996", "R$ 77.830", "R$ 67.282", "R$ 77.830", "R$ 62.067", "R$ 48.970", "R$ 56.417", "R$ 15.800"], "goals": ["R$ 80.634,75", "R$ 80.634,75", "R$ 80.634,75", "R$ 80.634,75", "R$ 80.634,75", "R$ 80.634,75", "R$ 80.634,75", "R$ 80.634,75", "R$ 80.634,75"] },
+            { "area": "Inventário", "indicador": "Acuracidade", "peso": 2, "ytd": "97,52%", "isLowerBetter": false, "results": ["99,47%", "99,78%", "99,84%", "106,17%", "99,73%", "99,76%", "99,19%", "99,54%", "74,18%"], "goals": ["98,33%", "98,33%", "98,33%", "98,33%", "98,33%", "98,33%", "98,33%", "98,33%", "98,33%"] },
+            { "area": "Recebimento", "indicador": "Nível de serviço recebimento D2C", "peso": 3, "ytd": "97,51%", "isLowerBetter": false, "results": ["99,15%", "99,80%", "98,99%", "97,32%", "98,28%", "97,30%", "96,65%", "95,67%", "96,93%"], "goals": ["98,50%", "98,50%", "98,50%", "98,50%", "98,50%", "98,50%", "98,50%", "98,50%", "98,50%"] },
+            { "area": "Recebimento", "indicador": "Nível de serviço recebimento B2B", "peso": 2, "ytd": "98,00%", "isLowerBetter": false, "results": ["97,00%", "98,00%", "99,00%", "97,00%", "98,00%", "98,00%", "99,00%", "98,00%", "98,00%"], "goals": ["98,00%", "98,00%", "98,00%", "98,00%", "98,00%", "98,00%", "98,00%", "98,00%", "98,00%"] },
+            { "area": "Expedição", "indicador": "On time D2C", "peso": 4, "ytd": "98,55%", "isLowerBetter": false, "results": ["99,49%", "99,69%", "99,79%", "99,82%", "99,87%", "99,82%", "99,88%", "99,76%", "99,77%"], "goals": ["99,50%", "99,50%", "99,50%", "99,50%", "99,50%", "99,50%", "99,50%", "99,50%", "99,50%"] },
+            { "area": "Expedição", "indicador": "On time B2B", "peso": 2, "ytd": "100,00%", "isLowerBetter": false, "results": ["100,00%", "100,00%", "100,00%", "100,00%", "100,00%", "100,00%", "100,00%", "100,00%", "100,00%"], "goals": ["99,00%", "99,00%", "99,00%", "99,00%", "99,00%", "99,00%", "99,00%", "99,00%", "99,00%"] },
+            { "area": "Expedição", "indicador": "Linhas não Atendidas (CSI)", "peso": 3, "ytd": "0,11%", "isLowerBetter": true, "results": ["0,11%", "0,04%", "0,12%", "0,13%", "0,08%", "0,24%", "0,04%", "0,11%", "0,11%"], "goals": ["0,10%", "0,10%", "0,10%", "0,10%", "0,10%", "0,10%", "0,10%", "0,10%", "0,10%"] },
+            { "area": "People", "indicador": "Absenteísmo", "peso": 1, "ytd": "1,11%", "isLowerBetter": true, "results": ["0,55%", "0,85%", "0,65%", "1,11%", "1,54%", "1,67%", "1,32%", "1,01%", "1,32%"], "goals": ["1,50%", "1,50%", "1,50%", "1,50%", "1,50%", "1,50%", "1,50%", "1,50%", "1,50%"] },
+            { "area": "People", "indicador": "Turnover", "peso": 2, "ytd": "3,40%", "isLowerBetter": true, "results": ["1,50%", "3,50%", "4,10%", "2,80%", "3,60%", "3,90%", "3,10%", "4,20%", "3,90%"], "goals": ["3,50%", "3,50%", "3,50%", "3,50%", "3,50%", "3,50%", "3,50%", "3,50%", "3,50%"] },
+            { "area": "Devolução", "indicador": "Devolução por motivos logísticos", "peso": 5, "ytd": "0,08%", "isLowerBetter": true, "results": ["0,07%", "0,11%", "0,06%", "0,07%", "0,13%", "0,08%", "0,06%", "0,11%", "0,00%"], "goals": ["0,06%", "0,06%", "0,06%", "0,06%", "0,06%", "0,06%", "0,06%", "0,06%", "0,06%"] },
+            { "area": "Devolução", "indicador": "Nível de Serviço Devolução", "peso": 3, "ytd": "99,16%", "isLowerBetter": false, "results": ["100,00%", "100,00%", "100,00%", "100,00%", "100,00%", "100,00%", "100,00%", "100,00%", "92,46%"], "goals": ["98,00%", "98,00%", "98,00%", "98,00%", "98,00%", "98,00%", "98,00%", "98,00%", "98,00%"] },
+            { "area": "Devolução", "indicador": "% Avaria Interna", "peso": 2, "ytd": "0,007%", "isLowerBetter": true, "results": ["0,01%", "0,00%", "0,01%", "0,01%", "0,01%", "0,01%", "0,01%", "0,00%", "0,01%"], "goals": ["0,010%", "0,010%", "0,010%", "0,010%", "0,010%", "0,010%", "0,010%", "0,010%", "0,010%"] },
+            { "area": "EHS", "indicador": "Auditoria Interna (WHP)", "peso": 5, "ytd": "91,14%", "isLowerBetter": false, "results": ["100,00%", "80,00%", "97,14%", "92,86%", "90,12%", "91,36%", "91,36%", "91,36%", "92,59%"], "goals": ["90,00%", "90,00%", "90,00%", "90,00%", "90,00%", "90,00%", "90,00%", "90,00%", "90,00%"] }
+        ];
+        
+        const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set'];
+        let areaChart, trendChartInstance;
+
+        // --- FUNÇÕES AUXILIARES ---
+
+        // Converte string de moeda ou porcentagem para número
+        const parseValue = (value) => {
+            if (typeof value !== 'string') return value;
+            return parseFloat(value.replace('R$', '').replace(/\./g, '').replace('%', '').replace(',', '.').trim());
+        };
+
+        // Verifica se a meta foi atingida
+        const isGoalMet = (result, goal, isLowerBetter) => {
+            const resultValue = parseValue(result);
+            const goalValue = parseValue(goal);
+            if (isNaN(resultValue) || isNaN(goalValue)) return false; // Não é possível comparar
+            return isLowerBetter ? resultValue <= goalValue : resultValue >= goalValue;
+        };
+        
+        // Formata um número para exibição
+        const formatDisplayValue = (valueStr) => {
+            if (typeof valueStr !== 'string') return valueStr;
+            if (valueStr.includes('%') || valueStr.toLowerCase().includes('r$')) {
+                return valueStr;
+            }
+            const num = parseFloat(valueStr);
+            return isNaN(num) ? valueStr : num.toLocaleString('pt-BR');
+        };
+
+        // --- RENDERIZAÇÃO DO DASHBOARD ---
+
+        // Renderiza os filtros na sidebar
+        const renderFilters = () => {
+            const filtersContainer = document.getElementById('filters');
+            const areas = ['Todos', ...new Set(kpiData.map(kpi => kpi.area))];
+            
+            filtersContainer.innerHTML = areas.map(area => `
+                <label class="flex items-center space-x-3 cursor-pointer">
+                    <input type="checkbox" value="${area}" class="form-checkbox h-5 w-5 text-indigo-600 rounded" checked>
+                    <span class="text-gray-700">${area}</span>
+                </label>
+            `).join('');
+            
+            filtersContainer.addEventListener('change', handleFilterChange);
+        };
+
+        // Renderiza a tabela de KPIs
+        const renderTable = (data) => {
+            const tableBody = document.getElementById('kpiTableBody');
+            tableBody.innerHTML = data.map((kpi, index) => {
+                const monthlyCells = kpi.results.map((result, i) => {
+                    const goal = kpi.goals[i];
+                    const met = isGoalMet(result, goal, kpi.isLowerBetter);
+                    const bgColor = parseValue(result) === null ? 'bg-gray-100' : (met ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800');
+                    return `<td class="px-6 py-4 text-center ${bgColor}">${formatDisplayValue(result) || 'N/A'}</td>`;
+                }).join('');
+
+                return `
+                    <tr class="bg-white border-b hover:bg-gray-50 cursor-pointer kpi-row" data-index="${index}">
+                        <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">${kpi.area}</th>
+                        <td class="px-6 py-4">${kpi.indicador}</td>
+                        <td class="px-6 py-4 text-center">${kpi.peso}</td>
+                        <td class="px-6 py-4 text-center font-semibold">${formatDisplayValue(kpi.ytd)}</td>
+                        ${monthlyCells}
+                    </tr>
+                `;
+            }).join('');
+             // Adiciona listeners de evento para as novas linhas da tabela
+            document.querySelectorAll('.kpi-row').forEach(row => {
+                row.addEventListener('click', () => showTrendModal(row.dataset.index));
+            });
+        };
+
+        // Renderiza os cards de resumo
+        const renderSummary = (data) => {
+            const totalKPIs = data.length;
+            const kpisOnGoal = data.filter(kpi => {
+                // Considera o último mês com dados (Setembro) para o status YTD
+                const lastResultIndex = kpi.results.length - 1;
+                const lastResult = kpi.results[lastResultIndex];
+                const lastGoal = kpi.goals[lastResultIndex];
+                return isGoalMet(lastResult, lastGoal, kpi.isLowerBetter);
+            }).length;
+
+            const percentageOnGoal = totalKPIs > 0 ? ((kpisOnGoal / totalKPIs) * 100).toFixed(1) : 0;
+            const unfulfilledLinesKPI = data.find(kpi => kpi.indicador === "Linhas não Atendidas (CSI)");
+            const unfulfilledLinesValue = unfulfilledLinesKPI ? unfulfilledLinesKPI.results[unfulfilledLinesKPI.results.length - 1] : 'N/A';
+
+
+            const summaryContainer = document.getElementById('summary');
+            summaryContainer.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Total de Indicadores</p>
+                        <p class="text-3xl font-bold text-gray-800">${totalKPIs}</p>
+                    </div>
+                     <div class="bg-indigo-100 p-3 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-600"><path d="M4 18.21a4 4 0 0 1 3.3-1.82 4 4 0 0 1 3.3 1.82"/><path d="M12 20.32V10"/><path d="M18.82 3.33a4 4 0 0 1-1.82 3.3 4 4 0 0 1-3.3-1.82"/><path d="M14 2.18V10"/><path d="m20 14-4-4-4 4"/><path d="M10 2.18V2.3"/><path d="M10 6.8V10"/></svg></div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">KPIs na Meta (Set)</p>
+                        <p class="text-3xl font-bold text-green-600">${kpisOnGoal}</p>
+                    </div>
+                     <div class="bg-green-100 p-3 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-600"><polyline points="20 6 9 17 4 12"/></svg></div>
+                </div>
+                 <div class="bg-white p-6 rounded-lg shadow flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">KPIs Fora da Meta (Set)</p>
+                        <p class="text-3xl font-bold text-red-600">${totalKPIs - kpisOnGoal}</p>
+                    </div>
+                     <div class="bg-red-100 p-3 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-600"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Atingimento da Meta</p>
+                        <p class="text-3xl font-bold text-gray-800">${percentageOnGoal}%</p>
+                    </div>
+                    <div class="bg-yellow-100 p-3 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-yellow-600"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg></div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Linhas ñ Atend. (Set)</p>
+                        <p class="text-3xl font-bold text-gray-800">${unfulfilledLinesValue}</p>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></div>
+                </div>
+            `;
+        };
+
+        // Renderiza o gráfico de performance por área
+        const renderAreaChart = (data) => {
+            const ctx = document.getElementById('areaPerformanceChart').getContext('2d');
+            const areas = [...new Set(data.map(kpi => kpi.area))];
+            
+            const onGoalData = areas.map(area => 
+                data.filter(kpi => {
+                    const lastResultIndex = kpi.results.length - 1;
+                    return kpi.area === area && isGoalMet(kpi.results[lastResultIndex], kpi.goals[lastResultIndex], kpi.isLowerBetter)
+                }).length
+            );
+            const offGoalData = areas.map(area => 
+                 data.filter(kpi => {
+                    const lastResultIndex = kpi.results.length - 1;
+                    return kpi.area === area && !isGoalMet(kpi.results[lastResultIndex], kpi.goals[lastResultIndex], kpi.isLowerBetter)
+                }).length
+            );
+
+            if (areaChart) {
+                areaChart.destroy();
+            }
+
+            areaChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: areas,
+                    datasets: [
+                        { label: 'Na Meta', data: onGoalData, backgroundColor: 'rgba(74, 222, 128, 0.7)' },
+                        { label: 'Fora da Meta', data: offGoalData, backgroundColor: 'rgba(248, 113, 113, 0.7)' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { stacked: true },
+                        y: { stacked: true, beginAtZero: true }
+                    },
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: { mode: 'index', intersect: false }
+                    }
+                }
+            });
+        };
+
+        // --- MANIPULadores DE EVENTOS ---
+
+        const handleFilterChange = (event) => {
+            const selectAllCheckbox = document.querySelector('#filters input[value="Todos"]');
+            const otherCheckboxes = document.querySelectorAll('#filters input:not([value="Todos"])');
+            
+            if (event.target.value === 'Todos') {
+                otherCheckboxes.forEach(cb => cb.checked = selectAllCheckbox.checked);
+            } else {
+                if (!event.target.checked) {
+                    selectAllCheckbox.checked = false;
+                } else if ([...otherCheckboxes].every(cb => cb.checked)) {
+                    selectAllCheckbox.checked = true;
+                }
+            }
+            
+            updateDashboard();
+        };
+
+        const handleSearch = (event) => {
+            updateDashboard();
+        }
+
+        // --- FUNÇÕES DE CONTROLE ---
+
+        const updateDashboard = () => {
+            const checkedAreasInput = document.querySelectorAll('#filters input:checked');
+            const checkedAreas = [...checkedAreasInput].map(el => el.value);
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            let filteredData = kpiData;
+            
+            if (!checkedAreas.includes('Todos')) {
+                filteredData = filteredData.filter(kpi => checkedAreas.includes(kpi.area));
+            }
+            
+            if (searchTerm) {
+                filteredData = filteredData.filter(kpi => kpi.indicador.toLowerCase().includes(searchTerm));
+            }
+            
+            renderTable(filteredData);
+            renderSummary(filteredData);
+            renderAreaChart(filteredData);
+        };
+        
+        // Exibe o modal com o gráfico de tendência
+        const showTrendModal = (rowIndex) => {
+            const indicatorName = document.querySelector(`[data-index='${rowIndex}']`).cells[1].innerText;
+            const kpi = kpiData.find(k => k.indicador === indicatorName);
+
+            if (!kpi) return;
+
+            document.getElementById('modalTitle').innerText = `Tendência: ${kpi.indicador}`;
+            const modal = document.getElementById('kpiModal');
+            modal.classList.remove('hidden');
+
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            const results = kpi.results.map(parseValue);
+            const goals = kpi.goals.map(parseValue);
+
+            if (trendChartInstance) {
+                trendChartInstance.destroy();
+            }
+
+            trendChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [
+                        {
+                            label: 'Resultado',
+                            data: results,
+                            borderColor: 'rgba(79, 70, 229, 1)',
+                            backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                            fill: true,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Meta',
+                            data: goals,
+                            borderColor: 'rgba(234, 179, 8, 1)',
+                            backgroundColor: 'transparent',
+                            borderDash: [5, 5],
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                       const originalValueStr = (context.dataset.label === 'Resultado' ? kpi.results[context.dataIndex] : kpi.goals[context.dataIndex]) || '';
+                                       if(typeof originalValueStr === 'string' && originalValueStr.includes('R$')) {
+                                           label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.parsed.y);
+                                       } else if (typeof originalValueStr === 'string' && originalValueStr.includes('%')) {
+                                           label += context.parsed.y.toFixed(2) + '%';
+                                       } else {
+                                           label += context.parsed.y;
+                                       }
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        };
+        
+        // Fecha o modal
+        const closeModal = () => {
+            document.getElementById('kpiModal').classList.add('hidden');
+            if (trendChartInstance) {
+                trendChartInstance.destroy();
+            }
+        };
+
+        // --- INICIALIZAÇÃO ---
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderFilters();
+            updateDashboard();
+            
+            document.getElementById('searchInput').addEventListener('input', handleSearch);
+            document.getElementById('closeModal').addEventListener('click', closeModal);
+            document.getElementById('kpiModal').addEventListener('click', (event) => {
+                 if (event.target.id === 'kpiModal') {
+                    closeModal();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
